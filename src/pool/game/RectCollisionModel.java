@@ -14,13 +14,13 @@ import pool.utils.Coordinate2D;
  */
 public class RectCollisionModel extends CollisionModel {
 
-    private Coordinate2D upperLeft;
-    private Coordinate2D lowerRight;
+    private Coordinate2D lowerLeft;
+    private Coordinate2D upperRight;
 
-    public RectCollisionModel(double mass, Coordinate2D upperLeft, Coordinate2D lowerRight) {
+    public RectCollisionModel(double mass, Coordinate2D lowerLeft, Coordinate2D upperRight) {
         super(mass);
-        this.upperLeft = upperLeft;
-        this.lowerRight = lowerRight;
+        this.lowerLeft = lowerLeft;
+        this.upperRight = upperRight;
     }
 
     @Override
@@ -28,11 +28,20 @@ public class RectCollisionModel extends CollisionModel {
         glColor3f(1.0f, 0.75f, 0.0f);
         glBegin(GL_LINE_LOOP);
         {
-            glVertex2d(upperLeft.x, upperLeft.y);
-            glVertex2d(upperLeft.x, lowerRight.y);
-            glVertex2d(lowerRight.x, lowerRight.y);
-            glVertex2d(lowerRight.x, upperLeft.y);
+            glVertex2d(lowerLeft.x, lowerLeft.y);
+            glVertex2d(lowerLeft.x, upperRight.y);
+            glVertex2d(upperRight.x, upperRight.y);
+            glVertex2d(upperRight.x, lowerLeft.y);
         }
         glEnd();
+    }
+    
+    public boolean intersected(Coordinate2D point) {
+        if (point.x >= lowerLeft.x && point.x <= upperRight.x) {
+            if (point.y >= lowerLeft.y && point.y >= upperRight.y) {
+                return true;
+            }
+        }
+        return false;
     }
 }

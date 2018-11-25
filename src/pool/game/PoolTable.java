@@ -18,13 +18,13 @@ import pool.utils.Coordinate2D;
  * @author filip
  */
 public class PoolTable implements LWJGLDrawable{
-    public Coordinate2D upperLeft;
-    public Coordinate2D lowerRight;
+    public Coordinate2D lowerLeft;
+    public Coordinate2D upperRight;
     public Color color;
     
     public PoolTable(Coordinate2D upperLeft, Coordinate2D lowerRight, Color color) {
-        this.upperLeft = upperLeft;
-        this.lowerRight = lowerRight;
+        this.lowerLeft = upperLeft;
+        this.upperRight = lowerRight;
         this.color = color;
     }
     
@@ -32,10 +32,10 @@ public class PoolTable implements LWJGLDrawable{
         glColor3ub(color.getRedByte(), color.getGreenByte(), color.getBlueByte());
         glBegin(GL_QUADS);
         {
-            glVertex2d(upperLeft.x, upperLeft.y);
-            glVertex2d(upperLeft.x, lowerRight.y);
-            glVertex2d(lowerRight.x, lowerRight.y);
-            glVertex2d(lowerRight.x, upperLeft.y);
+            glVertex2d(lowerLeft.x, lowerLeft.y);
+            glVertex2d(lowerLeft.x, upperRight.y);
+            glVertex2d(upperRight.x, upperRight.y);
+            glVertex2d(upperRight.x, lowerLeft.y);
         }
         glEnd();
     }

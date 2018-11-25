@@ -5,6 +5,7 @@
  */
 package pool.game;
 
+import java.util.List;
 import static org.lwjgl.opengl.GL11.*;
 import org.lwjgl.util.Color;
 import static pool.utils.ApplicationConstants.*;
@@ -25,6 +26,19 @@ public class Ball implements LWJGLDrawable {
         } else {
             collisionModel = new CircleCollisionModel(BALL_MASS, BALL_RADIUS, centerPosition);
         }
+    }
+    
+    public boolean inspectListOfElements(List<LWJGLDrawable> poolElements) {
+        for (LWJGLDrawable poolElement : poolElements) {
+            if (poolElement instanceof Ball) {
+                
+            } else if (poolElement instanceof Hole) {
+                return collisionModel.hitHole((Hole) poolElement);
+            } else if (poolElement instanceof Boundary) {
+                collisionModel.collideWithRectangular(((Boundary) poolElement).getCollisionModel());
+            }
+        }
+        return false;
     }
 
     @Override

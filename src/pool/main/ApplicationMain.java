@@ -5,7 +5,7 @@
  */
 package pool.main;
 
-import pool.gui.PoolDisplay;
+import pool.game.PoolGame;
 
 /**
  *
@@ -14,7 +14,6 @@ import pool.gui.PoolDisplay;
 public class ApplicationMain {
 
     public static void main(String[] args) {
-        PoolDisplay display = new PoolDisplay();
-        display.start();
+        PoolGame game = new PoolGame();
     }
 }

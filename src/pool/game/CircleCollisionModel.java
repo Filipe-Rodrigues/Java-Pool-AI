@@ -31,7 +31,7 @@ public class CircleCollisionModel extends CollisionModel {
         glColor3f(1.0f, 0.75f, 0.0f);
         glBegin(GL_LINE_LOOP);
         for (int i = 0; i < CIRCLE_SEGMENTS; i++) {
-            double theta =  (2f * Math.PI * (double)(i / CIRCLE_SEGMENTS));
+            double theta =  (2f * Math.PI * ((double)i / (double)CIRCLE_SEGMENTS));
             double x = radius * Math.cos(theta);
             double y = radius * Math.sin(theta);
             glVertex2d(x + centerPosition.x, y + centerPosition.y);
@@ -66,5 +66,22 @@ public class CircleCollisionModel extends CollisionModel {
                 + mass * thisVelocity.y + obj.mass * objVelocity.y;
         velocity.y /= (mass + obj.mass);
         
+    }
+    
+    public void collideWithRectangular(RectCollisionModel obj) {
+        if (obj.intersected(new Coordinate2D(centerPosition.x - radius, centerPosition.y))
+                || obj.intersected(new Coordinate2D(centerPosition.x + radius, centerPosition.y))) {
+            velocity.x *= -1;
+        } else if (obj.intersected(new Coordinate2D(centerPosition.x, centerPosition.y + radius))
+                || obj.intersected(new Coordinate2D(centerPosition.x, centerPosition.y - radius))) {
+            velocity.y *= -1;
+        }
+    }
+    
+    public boolean hitHole(Hole hole) {
+        if (centerPosition.getDistance(hole.getCenterPosition()) <= radius) {
+            return true;
+        }
+        return false;
     }
 }

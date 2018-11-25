@@ -17,6 +17,8 @@ import static pool.utils.ApplicationConstants.*;
 
 public class PoolDisplay {
 
+    public static boolean DRAW_COLLISION_BOUNDARIES = false;
+    
     private List<LWJGLDrawable> drawingElements;
     
     private int windowWid = 800;
@@ -26,14 +28,8 @@ public class PoolDisplay {
     private long lastFPS;
     private boolean vsync;
 
-    public PoolDisplay() {
-        int ulxPosition = (WIDTH - HEIGHT / 2) / 2;
-        int lrxPosition = ulxPosition + HEIGHT/2;
-        System.err.println(ulxPosition + ", " + lrxPosition);
-        drawingElements = new ArrayList<>();
-        drawingElements.add(new PoolTable(new Coordinate2D(ulxPosition, 0), new Coordinate2D(lrxPosition, HEIGHT), new Color(80, 0, 0)));
-        drawingElements.add(new Ball(true, new Coordinate2D(WIDTH/2, HEIGHT * 1 / 4), new Color(255, 255, 255)));
-        drawingElements.add(new Ball(false, new Coordinate2D(WIDTH/2, HEIGHT * 3 / 4), new Color(255, 255, 0)));
+    public PoolDisplay(List<LWJGLDrawable> drawingElements) {
+        this.drawingElements = drawingElements;
     }
 
     public void start() {
@@ -241,7 +237,7 @@ public class PoolDisplay {
     }
 
     public static void main(String[] argv) {
-        PoolDisplay fullscreenExample = new PoolDisplay();
+        PoolDisplay fullscreenExample = new PoolDisplay(new ArrayList<>());
         fullscreenExample.start();
     }
 }
