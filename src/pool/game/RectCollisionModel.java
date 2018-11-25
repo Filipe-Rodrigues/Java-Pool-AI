@@ -17,6 +17,12 @@ public class RectCollisionModel extends CollisionModel {
     private Coordinate2D upperLeft;
     private Coordinate2D lowerRight;
 
+    public RectCollisionModel(double mass, Coordinate2D upperLeft, Coordinate2D lowerRight) {
+        super(mass);
+        this.upperLeft = upperLeft;
+        this.lowerRight = lowerRight;
+    }
+
     @Override
     public void drawCollisionOutline() {
         glColor3f(1.0f, 0.75f, 0.0f);

@@ -18,6 +18,13 @@ public class CircleCollisionModel extends CollisionModel {
     private double radius;
     private Coordinate2D centerPosition;
     private Coordinate2D velocity;
+
+    public CircleCollisionModel(double mass, double radius, Coordinate2D centerPosition) {
+        super(mass);
+        this.radius = radius;
+        this.centerPosition = centerPosition;
+        this.velocity = new Coordinate2D(0, 0);
+    }
     
     @Override
     public void drawCollisionOutline() {
@@ -31,7 +38,19 @@ public class CircleCollisionModel extends CollisionModel {
         }
         glEnd();
     }
-    
+
+    public double getRadius() {
+        return radius;
+    }
+
+    public Coordinate2D getCenterPosition() {
+        return centerPosition;
+    }
+
+    public Coordinate2D getVelocity() {
+        return velocity;
+    }
+
     public boolean isStatic() {
         return velocity.x == 0 && velocity.y == 0;
     }
@@ -39,6 +58,7 @@ public class CircleCollisionModel extends CollisionModel {
     public void collideWithCircular(CircleCollisionModel obj) {
         Coordinate2D thisVelocity = new Coordinate2D(velocity);
         Coordinate2D objVelocity = new Coordinate2D(obj.velocity);
+        
         velocity.x = C * obj.mass * (objVelocity.x - thisVelocity.x) 
                 + mass * thisVelocity.x + obj.mass * objVelocity.x;
         velocity.x /= (mass + obj.mass);

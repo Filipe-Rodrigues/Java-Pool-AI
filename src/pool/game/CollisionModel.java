@@ -13,5 +13,13 @@ public abstract class CollisionModel {
 
     protected double mass;
 
+    public CollisionModel(double mass) {
+        this.mass = mass;
+    }
+
+    public double getMass() {
+        return mass;
+    }
+
     public abstract void drawCollisionOutline();
 }
