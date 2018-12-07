@@ -1,33 +1,57 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package pool.utils;
 
-/**
- *
- * @author filipe
- */
+import static java.lang.Math.*;
+
 public class Coordinate2D {
 
+    public static final Coordinate2D ORIGIN = new Coordinate2D(0, 0);
+    
     public double x;
     public double y;
+    public double determinant;
 
     public Coordinate2D(double x, double y) {
         this.x = x;
         this.y = y;
+        determinant = 0;
     }
 
     public Coordinate2D(Coordinate2D another) {
         this.x = another.x;
         this.y = another.y;
+        determinant = another.determinant;
     }
 
-    public double getDistance(Coordinate2D another) {
-        return getDistance(this, another);
+    public Coordinate2D toVector() {
+        determinant = x * y - x * y;
+        return this;
+    }
+    
+    public static Coordinate2D sum(Coordinate2D vector1, Coordinate2D vector2) {
+        return new Coordinate2D(vector1.x + vector2.x, vector1.y + vector2.y);
+    }
+    
+    public static Coordinate2D getVector(Coordinate2D pointA, Coordinate2D pointB) {
+        Coordinate2D vector = new Coordinate2D(pointB.x - pointA.x, pointB.y - pointA.y);
+        vector.determinant = pointA.x * pointB.y - pointB.x * pointA.y;
+        return vector;
     }
 
+    public static double getDotProduct(Coordinate2D vector1, Coordinate2D vector2)  {
+        return (vector1.x * vector2.x + vector1.y * vector2.y);
+    }
+    
+    public static double computeAngle(Coordinate2D source, Coordinate2D target, Coordinate2D reference) {
+        Coordinate2D vectorA = getVector(source, target);
+        Coordinate2D vectorB = getVector(source, reference);
+        double cosinusAlpha = getDotProduct(vectorA, vectorB) / (vectorA.getMagnitude() * vectorB.getMagnitude());
+        double alpha = acos(cosinusAlpha);
+        if (vectorB.x * vectorA.y - vectorA.x * vectorB.y < 0) {
+            alpha = 2 * PI - alpha;
+        }
+        return alpha;
+    }
+    
     public static double getDistance(Coordinate2D coord1, Coordinate2D coord2) {
         if (coord1 != null && coord2 != null) {
             double sumSquared = (double) (Math.pow((coord1.x - coord2.x), 2)
@@ -37,35 +61,58 @@ public class Coordinate2D {
         return Float.NaN;
     }
 
+    public static double getScalarProjection(Coordinate2D vectorA, Coordinate2D vectorB) {
+        return getDotProduct(vectorA, vectorB) / vectorB.getMagnitude();
+    }
+    
+    public static Coordinate2D getProjectionVector(Coordinate2D vectorA, Coordinate2D vectorB) {
+        return vectorB.getUnitVector().getScaled(getScalarProjection(vectorA, vectorB));
+    }
+    
+    public static Coordinate2D getRejectionVector(Coordinate2D vectorA, Coordinate2D vectorB) {
+        Coordinate2D projection = getProjectionVector(vectorA, vectorB);
+        projection.x = vectorA.x - projection.x;
+        projection.y = vectorA.y - projection.y;
+        return projection;
+    }
+    
+    public double getDistance(Coordinate2D another) {
+        return getDistance(this, another);
+    }
+
     public double computeAngle(Coordinate2D target, Coordinate2D reference) {
         return computeAngle(this, target, reference);
     }
 
-    public static double computeAngle(Coordinate2D source, Coordinate2D target, Coordinate2D reference) {
-        Coordinate2D u = new Coordinate2D(target.x - source.x, target.y - source.y);
-        Coordinate2D v = new Coordinate2D(reference.x - source.x, reference.y - source.y);
-        double cosinusAlphaNumerator = ((u.x * v.x) + (u.y * v.y));
-        double cosinusAlphaDenominator = Math.sqrt((((u.x * u.x) + (u.y * u.y))) * (((v.x * v.x) + (v.y * v.y))));
-
-        double cosinusAlpha = cosinusAlphaNumerator / cosinusAlphaDenominator;
-
-        double alpha = Math.acos(cosinusAlpha);
-
-        /*if (((u.x * v.y) - (v.x * u.y)) < 0) {
-            alpha = (2 * Math.PI) - alpha;
-        }*/
-
-        return alpha;
+    public Coordinate2D getScaled(double scalar) {
+        return new Coordinate2D(x * scalar, y * scalar);
+    }
+    
+    public double getMagnitude() {
+        return sqrt(x * x + y * y);
     }
 
-    public static double getRatio(double min, double max, double value) {
-        return (value - min) / (max - min);
+    public Coordinate2D getUnitVector() {
+        return new Coordinate2D(x / getMagnitude(), y / getMagnitude());
     }
-
-    public static double getRelativePosition(double min, double max, double ratio) {
-        return (max - min) * ratio + min;
+    
+    public Coordinate2D getNormal() {
+        return new Coordinate2D(y / getMagnitude(), - x / getMagnitude());
     }
-
+    
+    public double getDotProduct(Coordinate2D anotherVector)  {
+        return getDotProduct(this, anotherVector);
+    }
+   
+    public Coordinate2D getVector(Coordinate2D anotherPoint) {
+        return getVector(this, anotherPoint);
+    }
+   
+    public void sum(Coordinate2D point) {
+        x += point.x;
+        y += point.y;
+    }
+    
     @Override
     public String toString() {
         return "(" + x + ", " + y + ")";
@@ -88,4 +135,5 @@ public class Coordinate2D {
         hash = 37 * hash + (int) (Double.doubleToLongBits(this.y) ^ (Double.doubleToLongBits(this.y) >>> 32));
         return hash;
     }
+
 }

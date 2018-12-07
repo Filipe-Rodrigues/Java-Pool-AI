@@ -5,31 +5,46 @@ import java.util.List;
 import org.lwjgl.LWJGLException;
 import org.lwjgl.Sys;
 import org.lwjgl.input.Keyboard;
+import org.lwjgl.input.Mouse;
 import org.lwjgl.opengl.Display;
 import org.lwjgl.opengl.DisplayMode;
 import static org.lwjgl.opengl.GL11.*;
 import org.lwjgl.util.Color;
 import pool.game.Ball;
 import pool.game.LWJGLDrawable;
-import pool.game.PoolTable;
-import pool.utils.Coordinate2D;
+import pool.game.PoolGame;
 import static pool.utils.ApplicationConstants.*;
+import static java.lang.Math.*;
+import pool.utils.Coordinate2D;
+import static pool.utils.Coordinate2D.*;
 
 public class PoolDisplay {
 
-    public static boolean DRAW_COLLISION_BOUNDARIES = false;
+    public static boolean DRAW_COLLISION_BOUNDARIES = true;
     
-    private List<LWJGLDrawable> drawingElements;
+    private final PoolGame gameManager;
+    private final List<LWJGLDrawable> drawingElements;
+    private boolean holdingShot;
+    private final Coordinate2D mouseNormalizedPosition;
     
+    private boolean running;
     private int windowWid = 800;
     private int windowHei = 600;
+    private int viewportWid;
+    private int viewportDispWid;
+    private int viewportHei;
+    private int viewportDispHei;
     private long lastFrame;
     private int fps;
     private long lastFPS;
     private boolean vsync;
 
-    public PoolDisplay(List<LWJGLDrawable> drawingElements) {
-        this.drawingElements = drawingElements;
+    public PoolDisplay(PoolGame game) {
+        gameManager = game;
+        this.drawingElements = game.getPoolElements();
+        running = true;
+        holdingShot = false;
+        mouseNormalizedPosition = new Coordinate2D(0, 0);
     }
 
     public void start() {
@@ -51,6 +66,7 @@ public class PoolDisplay {
             int delta = getDelta();
 
             update(delta);
+            pollMouse();
             renderGL();
 
             Display.update();
@@ -59,6 +75,11 @@ public class PoolDisplay {
         }
 
         Display.destroy();
+        running = false;
+    }
+
+    public boolean isRunning() {
+        return running;
     }
 
     private void updateWindowState() {
@@ -70,20 +91,56 @@ public class PoolDisplay {
     private void adjustViewport() {
         windowWid = Display.getWidth();
         windowHei = Display.getHeight();
-        System.out.println(windowWid + " x " + windowHei);
         if (windowWid > windowHei * WIDTH / HEIGHT) {
-            glScissor((windowWid - windowHei * WIDTH / HEIGHT) / 2, 0, windowHei
-                    * WIDTH / HEIGHT, windowHei);
-            glViewport((windowWid - windowHei * WIDTH / HEIGHT) / 2, 0, windowHei
-                    * WIDTH / HEIGHT, windowHei);
+            viewportDispWid = (windowWid - windowHei * WIDTH / HEIGHT) / 2;
+            viewportWid = windowHei * WIDTH / HEIGHT;
+            viewportDispHei = 0;
+            viewportHei = windowHei;
         } else {
-            glScissor(0, (windowHei - windowWid * HEIGHT / WIDTH) / 2, windowWid,
-                    windowWid * HEIGHT / WIDTH);
-            glViewport(0, (windowHei - windowWid * HEIGHT / WIDTH) / 2, windowWid,
-                    windowWid * HEIGHT / WIDTH);
+            viewportDispWid = 0;
+            viewportWid = windowWid;
+            viewportDispHei = (windowHei - windowWid * HEIGHT / WIDTH) / 2;
+            viewportHei = windowWid * HEIGHT / WIDTH;
         }
+        glScissor(viewportDispWid, viewportDispHei, viewportWid, viewportHei);
+        glViewport(viewportDispWid, viewportDispHei, viewportWid, viewportHei);
     }
 
+    private void pollMouse() {
+        mouseNormalizedPosition.x = (double)(Mouse.getX() - viewportDispWid) / (double)viewportWid * WIDTH;
+        mouseNormalizedPosition.y = (double)(Mouse.getY() - viewportDispHei) / (double)viewportHei * HEIGHT;
+        while (Mouse.next()) {
+            if (Mouse.getEventButtonState()) {
+                evaluateMouseButtonPressed();
+            } else {
+                evaluateMouseButtonReleased();
+            }
+        }
+    }
+    
+    private void evaluateMouseButtonPressed() {
+        if (Mouse.getEventButton() == 0) {
+            holdingShot = true;
+        }
+    }
+    
+    private void evaluateMouseButtonReleased() {
+        if (Mouse.getEventButton() == 0) {
+            holdingShot = false;
+            Coordinate2D cuePosition = gameManager.getCuePosition();
+            Coordinate2D reference = new Coordinate2D(WIDTH, cuePosition.y);
+            double intensity = cuePosition.getDistance(mouseNormalizedPosition);
+            if (intensity >= 500) {
+                intensity = 1;
+            } else {
+                intensity /= 500d;
+            }
+            gameManager.cue(cuePosition.computeAngle(mouseNormalizedPosition, reference), intensity);
+        } else if (Mouse.getEventButton() == 1) {
+            gameManager.addRandomColoredBall(new Coordinate2D(mouseNormalizedPosition));
+        }
+    }
+    
     public void update(int delta) {
         if (Keyboard.isKeyDown(Keyboard.KEY_LEFT)) {
 
@@ -113,6 +170,8 @@ public class PoolDisplay {
                 } else if (Keyboard.getEventKey() == Keyboard.KEY_V) {
                     vsync = !vsync;
                     Display.setVSyncEnabled(vsync);
+                } else if (Keyboard.getEventKey() == Keyboard.KEY_SPACE) {
+                    gameManager.cue(Math.PI/4, 1f);
                 }
             }
         }
@@ -232,12 +291,22 @@ public class PoolDisplay {
     
     private void drawElements() {
         for (LWJGLDrawable drawingElement : drawingElements) {
-            drawingElement.draw();
+            if (drawingElement instanceof Ball) {
+                if (!((Ball) drawingElement).isFallen()) {
+                    drawingElement.draw();
+                }
+            } else {
+                drawingElement.draw();
+            }
         }
-    }
-
-    public static void main(String[] argv) {
-        PoolDisplay fullscreenExample = new PoolDisplay(new ArrayList<>());
-        fullscreenExample.start();
+        if (holdingShot) {
+            glLineWidth(2.0f);
+            Coordinate2D v = new Coordinate2D(getVector(gameManager.getCuePosition(), mouseNormalizedPosition));
+            glColor3d(v.getMagnitude()/500d, 1 - v.getMagnitude()/500d, 0);
+            glBegin(GL_LINES);
+            glVertex2d(gameManager.getCuePosition().x, gameManager.getCuePosition().y);
+            glVertex2d(mouseNormalizedPosition.x, mouseNormalizedPosition.y);
+            glEnd();
+        }
     }
 }
