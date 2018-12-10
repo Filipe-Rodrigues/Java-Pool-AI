@@ -157,7 +157,7 @@ public class CircleCollisionModel extends CollisionModel {
         centerPosition.sum(translation);
     }
 
-    public void collideWithQuadrilateral(QuadCollisionModel obj) {
+    public void collideWithQuadrilateralV2(QuadCollisionModel obj) {
         Coordinate2D mtv = getCollisionMTV(obj.p1, obj.p2);
         if (mtv != null) {
             translate(mtv);
@@ -184,7 +184,7 @@ public class CircleCollisionModel extends CollisionModel {
         }
     }
 
-    public void collideWithQuadrilateralV1(QuadCollisionModel obj) {
+    public void collideWithQuadrilateral(QuadCollisionModel obj) {
         Coordinate2D d1 = getVector(obj.p1, obj.p2);
         Coordinate2D d2 = getVector(obj.p2, obj.p3);
         Coordinate2D d3 = getVector(obj.p3, obj.p4);

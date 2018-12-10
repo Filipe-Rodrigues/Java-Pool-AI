@@ -90,7 +90,6 @@ public class PoolGame {
                 }
             }
         });
-        System.out.println(poolElements.size());
         displayThread.start();
         physicsThread.start();
     }
