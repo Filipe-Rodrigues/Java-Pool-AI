@@ -15,6 +15,7 @@ import pool.game.LWJGLDrawable;
 import pool.game.PoolGame;
 import static pool.utils.ApplicationConstants.*;
 import static java.lang.Math.*;
+import pool.game.PoolComponents;
 import pool.utils.Coordinate2D;
 import static pool.utils.Coordinate2D.*;
 
@@ -23,7 +24,7 @@ public class PoolDisplay {
     public static boolean DRAW_COLLISION_BOUNDARIES = true;
     
     private final PoolGame gameManager;
-    private final List<LWJGLDrawable> drawingElements;
+    private final PoolComponents components;
     private boolean holdingShot;
     private final Coordinate2D mouseNormalizedPosition;
     
@@ -41,7 +42,7 @@ public class PoolDisplay {
 
     public PoolDisplay(PoolGame game) {
         gameManager = game;
-        this.drawingElements = game.getPoolElements();
+        this.components = game.getPoolComponents();
         running = true;
         holdingShot = false;
         mouseNormalizedPosition = new Coordinate2D(0, 0);
@@ -290,6 +291,7 @@ public class PoolDisplay {
     }
     
     private void drawElements() {
+        List<LWJGLDrawable> drawingElements = components.getComponentList();
         for (LWJGLDrawable drawingElement : drawingElements) {
             if (drawingElement instanceof Ball) {
                 if (!((Ball) drawingElement).isFallen()) {

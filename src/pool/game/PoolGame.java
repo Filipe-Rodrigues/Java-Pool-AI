@@ -24,7 +24,9 @@ public class PoolGame {
     private List<Ball> balls;
     private Ball cueBall;
     private List<LWJGLDrawable> poolElements;
-    private List<LWJGLDrawable> allPoolElements;
+    private PoolComponents components;
+    private volatile Coordinate2D parsedNewBallCoord;
+    private volatile boolean hasNewBall;
 
     public PoolGame() {
         balls = new ArrayList<>();
@@ -62,10 +64,15 @@ public class PoolGame {
         poolElements.add(new Boundary(new Coordinate2D(820, 375), new Coordinate2D(0, 0), new Coordinate2D(0, 325),
                 new Coordinate2D(-15, 305), new Coordinate2D(-15, 5), color));
 
-        allPoolElements = new ArrayList<>();
+        List<LWJGLDrawable> allPoolElements = new ArrayList<>();
 
         allPoolElements.addAll(poolElements);
         allPoolElements.addAll(balls);
+        components = new PoolComponents(allPoolElements);
+
+        hasNewBall = false;
+        parsedNewBallCoord = null;
+
         PoolDisplay display = new PoolDisplay(this);
         Thread displayThread = new Thread(new Runnable() {
             @Override
@@ -77,6 +84,7 @@ public class PoolGame {
             @Override
             public void run() {
                 while (display.isRunning()) {
+                    addBall();
                     managePhysics();
                     holdOn(PHYSICS_THREAD_DELAY);
                 }
@@ -87,8 +95,8 @@ public class PoolGame {
         physicsThread.start();
     }
 
-    public List<LWJGLDrawable> getPoolElements() {
-        return allPoolElements;
+    public PoolComponents getPoolComponents() {
+        return components;
     }
 
     public Coordinate2D getCuePosition() {
@@ -96,15 +104,23 @@ public class PoolGame {
     }
 
     public void addRandomColoredBall(Coordinate2D position) {
-        Random rnd = new Random();
-        Ball newBall = new Ball(false, position, new Color((byte)rnd.nextInt(256), rnd.nextInt(256), rnd.nextInt(256)));
-        balls.add(newBall);
-        allPoolElements.add(newBall);
+        hasNewBall = true;
+        parsedNewBallCoord = new Coordinate2D(position);
     }
-    
+
     public void cue(double angle, double intensity) {
         Coordinate2D momentum = new Coordinate2D(MAX_CUE_MOMENTUM * intensity * cos(angle), MAX_CUE_MOMENTUM * intensity * sin(angle));
         cueBall.getCollisionModel().applyMomentum(momentum);
+    }
+
+    private void addBall() {
+        if (hasNewBall) {
+            Random rnd = new Random();
+            Ball newBall = new Ball(false, parsedNewBallCoord, new Color(rnd.nextInt(256), rnd.nextInt(256), rnd.nextInt(256)));
+            balls.add(newBall);
+            components.addComponent(newBall);
+            hasNewBall = false;
+        }
     }
 
     private void managePhysics() {
@@ -114,6 +130,8 @@ public class PoolGame {
             }
             if (balls.get(i).isFallen()) {
                 if (balls.get(i) != cueBall) {
+                    components.removeComponent(balls.get(i));
+                    balls.remove(i);
                     continue;
                 } else {
                     cueBall.setFallen(false);

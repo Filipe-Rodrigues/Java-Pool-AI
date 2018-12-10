@@ -8,6 +8,7 @@ package pool.game;
 import static org.lwjgl.opengl.GL11.*;
 import static pool.utils.ApplicationConstants.*;
 import static java.lang.Math.*;
+import java.util.Random;
 import org.lwjgl.util.Color;
 import pool.utils.Coordinate2D;
 import static pool.utils.Coordinate2D.*;
@@ -45,6 +46,11 @@ public class CircleCollisionModel extends CollisionModel {
         glEnd();
     }
 
+    private boolean isPointInside(Coordinate2D point) {
+        Coordinate2D dist = Coordinate2D.getVector(centerPosition, point);
+        return dist.getMagnitude() <= radius;
+    }
+
     public double getRadius() {
         return radius;
     }
@@ -67,12 +73,18 @@ public class CircleCollisionModel extends CollisionModel {
         }
         return false;
     }
-    
+
     public void collideWithCircular(CircleCollisionModel obj) {
         if (collidedWithBall(obj)) {
             // get the mtd
             Coordinate2D delta = getVector(centerPosition, obj.centerPosition);
             double d = delta.getMagnitude();
+            if (d == 0) {
+                Random rnd = new Random();
+                centerPosition.x += rnd.nextDouble() - 0.5d;
+                centerPosition.y += rnd.nextDouble() - 0.5d;
+                return;
+            }
             // minimum translation distance to push balls apart after intersecting
             Coordinate2D mtd = delta.getScaled((radius + obj.radius - d) / d);
 
@@ -85,32 +97,94 @@ public class CircleCollisionModel extends CollisionModel {
             centerPosition.sum(mtd.getScaled(-im1 / (im1 + im2)));
             obj.centerPosition.sum(mtd.getScaled(im2 / (im1 + im2)));
 
-            // impact speed
-            Coordinate2D v = sum(velocity, obj.velocity.getScaled(-1));
-            double vn = v.getDotProduct(mtd.getUnitVector());
+            Coordinate2D normal = delta.getUnitVector();
+            Coordinate2D tangent = normal.getOrthogonal(normal);
 
-            // sphere intersecting but moving away from each other already
-            if (vn > 0.0d) {
-                //return;
-            }
+            // Dot Product Tangent
+            double dpTan1 = velocity.getDotProduct(tangent);
+            double dpTan2 = obj.velocity.getDotProduct(tangent);
 
-            // collision impulse
-            double i = (-(1 + C) * vn) / (im1 + im2);
-            Coordinate2D impulse = mtd.getScaled(i);
-            //System.err.println("V = " + velocity);
-            //System.err.println("J = " + impulse);
-            //System.err.println("mtv = " + mtd);
-            //System.err.println("vn = " + vn);
+            // Dot Product Normal
+            double dpNorm1 = velocity.getDotProduct(normal);
+            double dpNorm2 = obj.velocity.getDotProduct(normal);
 
-            // change in momentum
-            velocity.sum(impulse.getScaled(im1));
-            obj.velocity.sum(impulse.getScaled(-im2));
-            //System.err.println("this v = " + velocity);
-            //System.err.println("other v = " + obj.velocity + "\n");
+            // Conservation of momentum in 1D
+            double m1 = (dpNorm1 * (mass - obj.mass) + 2.0f * obj.mass * dpNorm2) / (mass + obj.mass);
+            double m2 = (dpNorm2 * (obj.mass - mass) + 2.0f * mass * dpNorm1) / (mass + obj.mass);
+
+            // Update ball velocities
+            velocity.copy(Coordinate2D.sum(tangent.getScaled(dpTan1), normal.getScaled(m1)));
+            obj.velocity.copy(Coordinate2D.sum(tangent.getScaled(dpTan2), normal.getScaled(m2)));
         }
     }
 
+    private Coordinate2D getCollisionMTV(Coordinate2D p1, Coordinate2D p2) {
+        Coordinate2D closestPointInside = null;
+        Coordinate2D segment1 = getVector(p1, p2);
+        Coordinate2D segment2 = getVector(p1, centerPosition);
+        Coordinate2D projection = getProjectionVector(segment2, segment1);
+        Coordinate2D rejection = getRejectionVector(segment2, segment1);
+        double distance = rejection.getMagnitude();
+        if (distance <= radius) {
+            double projMagnitude = projection.getMagnitude();
+            if (projMagnitude <= segment1.getMagnitude() && projection.getDotProduct(segment1) >= 0) {
+                closestPointInside = sum(projection, p1);
+            }
+        }
+        if (closestPointInside == null) {
+            if (isPointInside(p1)) {
+                closestPointInside = p1;
+            } else if (isPointInside(p2)) {
+                closestPointInside = p2;
+            }
+        }
+        Coordinate2D mtv = null;
+        if (closestPointInside != null) {
+            mtv = getVector(closestPointInside, centerPosition);
+            mtv = mtv.getScaled((radius / mtv.getMagnitude()) - 1.0d);
+            System.err.println("Segment1: " + segment1);
+            System.err.println("Segment2: " + segment2);
+            System.err.println("Projection: " + projection);
+            System.err.println("P1: " + p1);
+            System.err.println("Rejection: " + rejection + "\n");
+        }
+
+        return mtv;
+    }
+
+    private void translate(Coordinate2D translation) {
+        System.err.println("MTV: " + translation);
+        centerPosition.sum(translation);
+    }
+
     public void collideWithQuadrilateral(QuadCollisionModel obj) {
+        Coordinate2D mtv = getCollisionMTV(obj.p1, obj.p2);
+        if (mtv != null) {
+            translate(mtv);
+            deflect(mtv);
+            return;
+        }
+        mtv = getCollisionMTV(obj.p2, obj.p3);
+        if (mtv != null) {
+            translate(mtv);
+            deflect(mtv);
+            return;
+        }
+        mtv = getCollisionMTV(obj.p3, obj.p4);
+        if (mtv != null) {
+            translate(mtv);
+            deflect(mtv);
+            return;
+        }
+        mtv = getCollisionMTV(obj.p4, obj.p1);
+        if (mtv != null) {
+            translate(mtv);
+            deflect(mtv);
+            return;
+        }
+    }
+
+    public void collideWithQuadrilateralV1(QuadCollisionModel obj) {
         Coordinate2D d1 = getVector(obj.p1, obj.p2);
         Coordinate2D d2 = getVector(obj.p2, obj.p3);
         Coordinate2D d3 = getVector(obj.p3, obj.p4);

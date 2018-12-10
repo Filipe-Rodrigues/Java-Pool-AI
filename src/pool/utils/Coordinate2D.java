@@ -2,7 +2,7 @@ package pool.utils;
 
 import static java.lang.Math.*;
 
-public class Coordinate2D {
+public final class Coordinate2D {
 
     public static final Coordinate2D ORIGIN = new Coordinate2D(0, 0);
     
@@ -17,9 +17,7 @@ public class Coordinate2D {
     }
 
     public Coordinate2D(Coordinate2D another) {
-        this.x = another.x;
-        this.y = another.y;
-        determinant = another.determinant;
+        copy(another);
     }
 
     public Coordinate2D toVector() {
@@ -62,11 +60,11 @@ public class Coordinate2D {
     }
 
     public static double getScalarProjection(Coordinate2D vectorA, Coordinate2D vectorB) {
-        return getDotProduct(vectorA, vectorB) / vectorB.getMagnitude();
+        return getDotProduct(vectorA, vectorB) / vectorB.getDotProduct(vectorB);
     }
     
     public static Coordinate2D getProjectionVector(Coordinate2D vectorA, Coordinate2D vectorB) {
-        return vectorB.getUnitVector().getScaled(getScalarProjection(vectorA, vectorB));
+        return vectorB.getScaled(getScalarProjection(vectorA, vectorB));
     }
     
     public static Coordinate2D getRejectionVector(Coordinate2D vectorA, Coordinate2D vectorB) {
@@ -74,6 +72,16 @@ public class Coordinate2D {
         projection.x = vectorA.x - projection.x;
         projection.y = vectorA.y - projection.y;
         return projection;
+    }
+    
+    public void copy(Coordinate2D another) {
+        x = another.x;
+        y = another.y;
+        determinant = another.determinant;
+    }
+    
+    public Coordinate2D getOrthogonal(Coordinate2D vector) {
+        return new Coordinate2D(-vector.y, vector.x);
     }
     
     public double getDistance(Coordinate2D another) {
