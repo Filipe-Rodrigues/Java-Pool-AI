@@ -16,6 +16,6 @@ public class ApplicationMain {
 
     public static void main(String[] args) {
         //PoolGame game = new PoolGame();
-        PoolTrainingManager manager = new PoolTrainingManager(20);
+        PoolTrainingManager manager = new PoolTrainingManager(100);
     }
 }

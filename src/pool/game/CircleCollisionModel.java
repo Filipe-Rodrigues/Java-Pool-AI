@@ -195,7 +195,6 @@ public class CircleCollisionModel extends CollisionModel {
             collideWithQuadrilateralV1(obj);
         }
     }
-
     public void collideWithQuadrilateralV2(QuadCollisionModel obj) {
         Coordinate2D mtv = getCollisionMTV(obj.p1, obj.p2);
         if (mtv != null) {

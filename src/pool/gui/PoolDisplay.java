@@ -334,13 +334,7 @@ public class PoolDisplay {
     private void drawElements() {
         List<LWJGLDrawable> drawingElements = components.getComponentList();
         for (LWJGLDrawable drawingElement : drawingElements) {
-            if (drawingElement instanceof Ball) {
-                if (!((Ball) drawingElement).isFallen()) {
-                    drawingElement.draw();
-                }
-            } else {
-                drawingElement.draw();
-            }
+            drawingElement.draw();
         }
         if (gamemode == HUMAN_X_HUMAN_MODE) {
             if (holdingShot) {
