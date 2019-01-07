@@ -1,6 +1,5 @@
 package pool.gui;
 
-import java.util.ArrayList;
 import java.util.List;
 import org.lwjgl.LWJGLException;
 import org.lwjgl.Sys;
@@ -9,26 +8,30 @@ import org.lwjgl.input.Mouse;
 import org.lwjgl.opengl.Display;
 import org.lwjgl.opengl.DisplayMode;
 import static org.lwjgl.opengl.GL11.*;
-import org.lwjgl.util.Color;
 import pool.game.Ball;
 import pool.game.LWJGLDrawable;
 import pool.game.PoolGame;
+import pool.game.PoolTrainingManager;
 import static pool.utils.ApplicationConstants.*;
-import static java.lang.Math.*;
-import pool.game.PoolComponents;
+import pool.game.PoolVolatileComponents;
 import pool.utils.Coordinate2D;
 import static pool.utils.Coordinate2D.*;
 
 public class PoolDisplay {
 
+    public static final int HUMAN_X_HUMAN_MODE = 0;
+    public static final int AI_DEMO_MODE = 1;
+
     public static boolean DRAW_COLLISION_BOUNDARIES = true;
-    
-    private final PoolGame gameManager;
-    private final PoolComponents components;
+
+    private final PoolGame poolMatch;
+    private final PoolTrainingManager trainingManager;
+    private final PoolVolatileComponents components;
     private boolean holdingShot;
     private final Coordinate2D mouseNormalizedPosition;
-    
-    private boolean running;
+    private int cheatMultiplier = 1;
+    private final int gamemode;
+
     private int windowWid = 800;
     private int windowHei = 600;
     private int viewportWid;
@@ -41,9 +44,19 @@ public class PoolDisplay {
     private boolean vsync;
 
     public PoolDisplay(PoolGame game) {
-        gameManager = game;
+        gamemode = HUMAN_X_HUMAN_MODE;
+        poolMatch = game;
+        trainingManager = null;
         this.components = game.getPoolComponents();
-        running = true;
+        holdingShot = false;
+        mouseNormalizedPosition = new Coordinate2D(0, 0);
+    }
+    
+    public PoolDisplay(PoolTrainingManager manager) {
+        gamemode = AI_DEMO_MODE;
+        trainingManager = manager;
+        poolMatch = null;
+        this.components = manager.getPoolComponents();
         holdingShot = false;
         mouseNormalizedPosition = new Coordinate2D(0, 0);
     }
@@ -76,11 +89,7 @@ public class PoolDisplay {
         }
 
         Display.destroy();
-        running = false;
-    }
-
-    public boolean isRunning() {
-        return running;
+        components.stopRunning();
     }
 
     private void updateWindowState() {
@@ -108,8 +117,8 @@ public class PoolDisplay {
     }
 
     private void pollMouse() {
-        mouseNormalizedPosition.x = (double)(Mouse.getX() - viewportDispWid) / (double)viewportWid * WIDTH;
-        mouseNormalizedPosition.y = (double)(Mouse.getY() - viewportDispHei) / (double)viewportHei * HEIGHT;
+        mouseNormalizedPosition.x = (double) (Mouse.getX() - viewportDispWid) / (double) viewportWid * WIDTH;
+        mouseNormalizedPosition.y = (double) (Mouse.getY() - viewportDispHei) / (double) viewportHei * HEIGHT;
         while (Mouse.next()) {
             if (Mouse.getEventButtonState()) {
                 evaluateMouseButtonPressed();
@@ -118,30 +127,40 @@ public class PoolDisplay {
             }
         }
     }
-    
+
     private void evaluateMouseButtonPressed() {
         if (Mouse.getEventButton() == 0) {
-            holdingShot = true;
+            if (gamemode == HUMAN_X_HUMAN_MODE) {
+                if (poolMatch.isCueAvailable()) {
+                    holdingShot = true;
+                }
+            }
         }
     }
-    
+
     private void evaluateMouseButtonReleased() {
         if (Mouse.getEventButton() == 0) {
-            holdingShot = false;
-            Coordinate2D cuePosition = gameManager.getCuePosition();
-            Coordinate2D reference = new Coordinate2D(WIDTH, cuePosition.y);
-            double intensity = cuePosition.getDistance(mouseNormalizedPosition);
-            if (intensity >= 500) {
-                intensity = 1;
-            } else {
-                intensity /= 500d;
+            if (gamemode == HUMAN_X_HUMAN_MODE) {
+                if (holdingShot) {
+                    holdingShot = false;
+                    Coordinate2D cuePosition = poolMatch.getCuePosition();
+                    Coordinate2D reference = new Coordinate2D(WIDTH, cuePosition.y);
+                    double intensity = cuePosition.getDistance(mouseNormalizedPosition);
+                    if (intensity >= 500) {
+                        intensity = 1;
+                    } else {
+                        intensity /= 500d;
+                    }
+                    poolMatch.cue(cuePosition.computeAngle(mouseNormalizedPosition, reference), cheatMultiplier * intensity);
+                }
             }
-            gameManager.cue(cuePosition.computeAngle(mouseNormalizedPosition, reference), intensity);
         } else if (Mouse.getEventButton() == 1) {
-            gameManager.addRandomColoredBall(new Coordinate2D(mouseNormalizedPosition));
+            if (gamemode == HUMAN_X_HUMAN_MODE) {
+                poolMatch.addRandomColoredBall(new Coordinate2D(mouseNormalizedPosition));
+            }
         }
     }
-    
+
     public void update(int delta) {
         if (Keyboard.isKeyDown(Keyboard.KEY_LEFT)) {
 
@@ -159,20 +178,42 @@ public class PoolDisplay {
 
         while (Keyboard.next()) {
             if (Keyboard.getEventKeyState()) {
-                if (Keyboard.getEventKey() == Keyboard.KEY_F) {
-                    if (Display.isFullscreen()) {
-                        setDisplayMode(WIDTH, HEIGHT, false);
-                        adjustViewport();
-                    } else {
-                        setDisplayMode(Display.getDesktopDisplayMode().getWidth(),
-                                Display.getDesktopDisplayMode().getHeight(), true);
-                        adjustViewport();
-                    }
-                } else if (Keyboard.getEventKey() == Keyboard.KEY_V) {
-                    vsync = !vsync;
-                    Display.setVSyncEnabled(vsync);
-                } else if (Keyboard.getEventKey() == Keyboard.KEY_SPACE) {
-                    gameManager.cue(Math.PI/4, 1f);
+                switch (Keyboard.getEventKey()) {
+                    case Keyboard.KEY_F:
+                        if (Display.isFullscreen()) {
+                            setDisplayMode(WIDTH, HEIGHT, false);
+                            adjustViewport();
+                        } else {
+                            setDisplayMode(Display.getDesktopDisplayMode().getWidth(),
+                                    Display.getDesktopDisplayMode().getHeight(), true);
+                            adjustViewport();
+                        }
+                        break;
+                    case Keyboard.KEY_V:
+                        vsync = !vsync;
+                        Display.setVSyncEnabled(vsync);
+                        break;
+                    case Keyboard.KEY_SPACE:
+                        if (gamemode == AI_DEMO_MODE) {
+                            trainingManager.testRandomizedShot();
+                        }
+                        break;
+                    case Keyboard.KEY_O:
+                        DRAW_COLLISION_BOUNDARIES = !DRAW_COLLISION_BOUNDARIES;
+                        break;
+                    case Keyboard.KEY_LCONTROL:
+                        cheatMultiplier = 10;
+                        break;
+                    default:
+                        break;
+                }
+            } else {
+                switch (Keyboard.getEventKey()) {
+                    case Keyboard.KEY_LCONTROL:
+                        cheatMultiplier = 1;
+                        break;
+                    default:
+                        break;
                 }
             }
         }
@@ -289,7 +330,7 @@ public class PoolDisplay {
     private void clearScreen() {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     }
-    
+
     private void drawElements() {
         List<LWJGLDrawable> drawingElements = components.getComponentList();
         for (LWJGLDrawable drawingElement : drawingElements) {
@@ -301,14 +342,16 @@ public class PoolDisplay {
                 drawingElement.draw();
             }
         }
-        if (holdingShot) {
-            glLineWidth(2.0f);
-            Coordinate2D v = new Coordinate2D(getVector(gameManager.getCuePosition(), mouseNormalizedPosition));
-            glColor3d(v.getMagnitude()/500d, 1 - v.getMagnitude()/500d, 0);
-            glBegin(GL_LINES);
-            glVertex2d(gameManager.getCuePosition().x, gameManager.getCuePosition().y);
-            glVertex2d(mouseNormalizedPosition.x, mouseNormalizedPosition.y);
-            glEnd();
+        if (gamemode == HUMAN_X_HUMAN_MODE) {
+            if (holdingShot) {
+                glLineWidth(2.0f);
+                Coordinate2D v = new Coordinate2D(getVector(poolMatch.getCuePosition(), mouseNormalizedPosition));
+                glColor3d(v.getMagnitude() / 500d, 1 - v.getMagnitude() / 500d, 0);
+                glBegin(GL_LINES);
+                glVertex2d(poolMatch.getCuePosition().x, poolMatch.getCuePosition().y);
+                glVertex2d(mouseNormalizedPosition.x, mouseNormalizedPosition.y);
+                glEnd();
+            }
         }
     }
 }

@@ -6,6 +6,7 @@
 package pool.main;
 
 import pool.game.PoolGame;
+import pool.game.PoolTrainingManager;
 
 /**
  *
@@ -14,6 +15,7 @@ import pool.game.PoolGame;
 public class ApplicationMain {
 
     public static void main(String[] args) {
-        PoolGame game = new PoolGame();
+        //PoolGame game = new PoolGame();
+        PoolTrainingManager manager = new PoolTrainingManager(20);
     }
 }

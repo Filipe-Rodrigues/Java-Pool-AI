@@ -6,7 +6,6 @@
 package pool.game;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -16,16 +15,18 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  *
  * @author filip
  */
-public class PoolComponents {
+public class PoolVolatileComponents {
 
     private volatile List<LWJGLDrawable> components;
+    private volatile boolean stillRunning;
     private final ReadWriteLock lock;
     private final Lock readLock;
     private final Lock writeLock;
 
-    public PoolComponents(List<LWJGLDrawable> components) {
+    public PoolVolatileComponents(List<LWJGLDrawable> components) {
         lock = new ReentrantReadWriteLock();
         this.components = components;
+        stillRunning = true;
         readLock = lock.readLock();
         writeLock = lock.writeLock();
     }
@@ -47,6 +48,15 @@ public class PoolComponents {
             writeLock.unlock();
         }
     }
+    
+    public void addBalls(List<Ball> newComponents) {
+        try {
+            writeLock.lock();
+            components.addAll(newComponents);
+        } finally {
+            writeLock.unlock();
+        }
+    }
 
     public void removeComponent(LWJGLDrawable component) {
         try {
@@ -54,6 +64,24 @@ public class PoolComponents {
             components.remove(component);
         } finally {
             writeLock.unlock();
+        }
+    }
+    
+    public void stopRunning() {
+        try {
+            writeLock.lock();
+            stillRunning = false;
+        } finally {
+            writeLock.unlock();
+        }
+    }
+    
+    public boolean isStillRunning() {
+        try {
+            readLock.lock();
+            return stillRunning;
+        } finally {
+            readLock.unlock();
         }
     }
 }

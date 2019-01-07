@@ -21,6 +21,7 @@ public class Ball implements LWJGLDrawable {
     private CircleCollisionModel collisionModel;
     private Color color;
     private boolean fallen;
+    private boolean stationary;
 
     public Ball(boolean isCueBall, Coordinate2D centerPosition, Color color) {
         this.color = color;
@@ -43,6 +44,11 @@ public class Ball implements LWJGLDrawable {
                 collisionModel.collideWithQuadrilateral(((Boundary) poolElement).getCollisionModel());
             }
         }
+    }
+    
+    public boolean updateBallState() {
+        stationary = collisionModel.isStatic();
+        return stationary;
     }
 
     public boolean isFallen() {

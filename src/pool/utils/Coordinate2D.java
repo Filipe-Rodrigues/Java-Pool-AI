@@ -8,35 +8,35 @@ public final class Coordinate2D {
     
     public double x;
     public double y;
-    public double determinant;
 
     public Coordinate2D(double x, double y) {
         this.x = x;
         this.y = y;
-        determinant = 0;
     }
 
     public Coordinate2D(Coordinate2D another) {
         copy(another);
-    }
-
-    public Coordinate2D toVector() {
-        determinant = x * y - x * y;
-        return this;
     }
     
     public static Coordinate2D sum(Coordinate2D vector1, Coordinate2D vector2) {
         return new Coordinate2D(vector1.x + vector2.x, vector1.y + vector2.y);
     }
     
+    public static Coordinate2D sub(Coordinate2D vector1, Coordinate2D vector2) {
+        return new Coordinate2D(vector1.x - vector2.x, vector1.y - vector2.y);
+    }
+    
     public static Coordinate2D getVector(Coordinate2D pointA, Coordinate2D pointB) {
         Coordinate2D vector = new Coordinate2D(pointB.x - pointA.x, pointB.y - pointA.y);
-        vector.determinant = pointA.x * pointB.y - pointB.x * pointA.y;
         return vector;
     }
 
     public static double getDotProduct(Coordinate2D vector1, Coordinate2D vector2)  {
         return (vector1.x * vector2.x + vector1.y * vector2.y);
+    }
+    
+    public static double getCrossProduct(Coordinate2D vector1, Coordinate2D vector2)  {
+        return (vector1.x * vector2.y - vector1.y * vector2.x);
     }
     
     public static double computeAngle(Coordinate2D source, Coordinate2D target, Coordinate2D reference) {
@@ -77,7 +77,6 @@ public final class Coordinate2D {
     public void copy(Coordinate2D another) {
         x = another.x;
         y = another.y;
-        determinant = another.determinant;
     }
     
     public Coordinate2D getOrthogonal(Coordinate2D vector) {
@@ -94,6 +93,12 @@ public final class Coordinate2D {
 
     public Coordinate2D getScaled(double scalar) {
         return new Coordinate2D(x * scalar, y * scalar);
+    }
+    
+    public void setScale(double scale) {
+        double magnitude = getMagnitude();
+        x *= scale / magnitude;
+        y *= scale / magnitude;
     }
     
     public double getMagnitude() {
@@ -119,6 +124,11 @@ public final class Coordinate2D {
     public void sum(Coordinate2D point) {
         x += point.x;
         y += point.y;
+    }
+    
+    public void sub(Coordinate2D point) {
+        x -= point.x;
+        y -= point.y;
     }
     
     @Override

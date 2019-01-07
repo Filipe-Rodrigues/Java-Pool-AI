@@ -8,10 +8,14 @@ package pool.game;
 import static org.lwjgl.opengl.GL11.*;
 import static pool.utils.ApplicationConstants.*;
 import static java.lang.Math.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Random;
-import org.lwjgl.util.Color;
 import pool.utils.Coordinate2D;
 import static pool.utils.Coordinate2D.*;
+import pool.utils.Pair;
+import pool.utils.RayTracingStats;
 
 /**
  *
@@ -24,12 +28,16 @@ public class CircleCollisionModel extends CollisionModel {
     private final double radius;
     private final Coordinate2D centerPosition;
     private final Coordinate2D velocity;
+    private boolean collided;
+    private boolean touchingSurface;
+    private Coordinate2D collideTranslation;
 
     public CircleCollisionModel(double mass, double radius, Coordinate2D centerPosition) {
         super(mass);
         this.radius = radius;
         this.centerPosition = centerPosition;
         this.velocity = new Coordinate2D(0, 0);
+        collided = false;
     }
 
     @Override
@@ -121,7 +129,7 @@ public class CircleCollisionModel extends CollisionModel {
     private Coordinate2D getCollisionMTV(Coordinate2D p1, Coordinate2D p2) {
         Coordinate2D closestPointInside = null;
         Coordinate2D segment1 = getVector(p1, p2);
-        Coordinate2D segment2 = getVector(p1, centerPosition);
+        Coordinate2D segment2 = getVector(centerPosition, p1);
         Coordinate2D projection = getProjectionVector(segment2, segment1);
         Coordinate2D rejection = getRejectionVector(segment2, segment1);
         double distance = rejection.getMagnitude();
@@ -153,11 +161,42 @@ public class CircleCollisionModel extends CollisionModel {
     }
 
     private void translate(Coordinate2D translation) {
-        System.err.println("MTV: " + translation);
         centerPosition.sum(translation);
     }
 
+    private void computeRayTracing(Coordinate2D vertex1, Coordinate2D vertex2, List<Pair<RayTracingStats, Double>> uValues) {
+        Coordinate2D r = getVector(vertex1, vertex2);
+        Coordinate2D s = new Coordinate2D(velocity.getScaled(CORRECTION_FACTOR * 10));
+        s.sum(velocity.getUnitVector().getScaled(radius/cos(computeAngle(ORIGIN, velocity, r.getNormal()))));
+        RayTracingStats stats = new RayTracingStats(vertex1, r, centerPosition, s, true);
+        
+        if (stats.t >= 0 && stats.t <= 1 && stats.u >= 0 && stats.u <= 1) {
+            uValues.add(new Pair<>(stats, stats.u));
+        }
+    }
+
     public void collideWithQuadrilateral(QuadCollisionModel obj) {
+        List<Pair<RayTracingStats, Double>> uValues = new ArrayList<>();
+        computeRayTracing(obj.p2, obj.p1, uValues);
+        computeRayTracing(obj.p3, obj.p2, uValues);
+        computeRayTracing(obj.p4, obj.p3, uValues);
+        computeRayTracing(obj.p1, obj.p4, uValues);
+        if (!uValues.isEmpty()) {            
+            Collections.sort(uValues);
+            RayTracingStats rtStats = uValues.get(0).getLeft();
+            Coordinate2D normal = uValues.get(0).getLeft().normal;
+            Coordinate2D collisionPoint = sum(rtStats.a, rtStats.r.getScaled(rtStats.t));
+            collisionPoint.sub(velocity.getUnitVector().getScaled(radius/cos(computeAngle(ORIGIN, velocity, normal))));
+            //double multiplier = uValues.get(0).getRight() * velocity.getMagnitude() - radius;
+            collideTranslation = collisionPoint;
+            deflect(normal);
+            collided = true;
+        } else if (!touchingSurface) {
+            collideWithQuadrilateralV1(obj);
+        }
+    }
+
+    public void collideWithQuadrilateralV2(QuadCollisionModel obj) {
         Coordinate2D mtv = getCollisionMTV(obj.p1, obj.p2);
         if (mtv != null) {
             translate(mtv);
@@ -286,8 +325,17 @@ public class CircleCollisionModel extends CollisionModel {
         if (abs(velocity.y) < 0.5) {
             velocity.y = 0;
         }
-        centerPosition.x += (velocity.x * CORRECTION_FACTOR * 10);
-        centerPosition.y += (velocity.y * CORRECTION_FACTOR * 10);
+
+        if (!collided) {
+            centerPosition.x += (velocity.x * CORRECTION_FACTOR * 10);
+            centerPosition.y += (velocity.y * CORRECTION_FACTOR * 10);
+            touchingSurface = false;
+        } else {
+            //translate(collideTranslation);
+            centerPosition.copy(collideTranslation);
+            collided = false;
+            touchingSurface = true;
+        }
 
         if (centerPosition.x + radius > 820) {
             centerPosition.x = 820 - radius;
